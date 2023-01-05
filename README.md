@@ -67,6 +67,67 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     displayhead(train, valid, test, 5)
 返回结果如下，从上往下三个表分别对应训练集、开发集以及测试集：
 ![image](https://user-images.githubusercontent.com/103374522/210746375-c1cd403d-f5fb-4673-bae3-cdd60b0aa2e7.png)
+
 每个表格中只有三列，前两列为用来进行对比的句子，最后一列为标签。
 
 # 任务2：文本数据分析
+## 2.1 缺失值分析
+接下来查看缺失值：
+
+    def check_missing(data):
+        total = data.isnull().sum().sort_values(ascending = False)
+        percent = (data.isnull().sum()/data.isnull().count()*100).sort_values(ascending = False)
+        missing_data=pd.concat([total, percent], axis=1, keys=['Total', 'Percent'])
+        missing_data.head()
+    
+    check_missing(train)
+    check_missing(test)
+    check_missing(valid)
+        
+三个表格的返回结果如下图所示
+
+![image](https://user-images.githubusercontent.com/103374522/210751161-ef64c2a0-9433-46dd-b69a-6dd8c4bf5804.png)
+
+可以看到数据集中并不包含缺失值信息。
+
+## 2.2 查看标签分布情况
+定义一个函数来讲数据集不同标签的数量计算显示出来
+
+    def label_value_counts(data):
+        display(data['label'].value_counts())
+        f,ax=plt.subplots(1,2,figsize=(18,8))
+        data['label'].value_counts().plot.pie(explode=[0,0.1],autopct='%1.2f%%',ax=ax[0],shadow=True)
+        ax[0].set_title('label')
+        ax[0].set_ylabel('')
+        sns.countplot('label',data=data,ax=ax[1])
+        ax[1].set_title('label')
+        plt.show()
+        
+标签数量及标签分布情况：
+
+    label_value_counts(train)
+    label_value_counts(valid)
+    label_value_counts(test)
+
+执行代码之后三个数据集的标签情况都如下图所示，数据集里面的样本数量是相同的，标签分布也十分均匀，对半分。
+
+![image](https://user-images.githubusercontent.com/103374522/210754427-61497e6d-510f-42f5-8e78-5d83df3577e2.png)
+
+## 2.3 查看文本长度分布情况
+使用下面的代码，分析三个数据集的文本长度，并将其可视化：
+句子一的分布情况：
+
+    train_query1=train['query1'].str.len()
+    valid_query1=valid['query1'].str.len()
+    test_query1=test['query1'].str.len()
+    fig,(ax1,ax2,ax3)=plt.subplots(1,3,figsize=(15,6))
+    sns.distplot(train_query1,ax=ax1,color='blue')
+    sns.distplot(valid_query1,ax=ax2,color='orange')
+    sns.distplot(test_query1,ax=ax3,color='green')
+    ax1.set_title('query1 in Train data')
+    ax2.set_title('query1 in Valid data')
+    ax3.set_title('query1 in Test data')
+    plt.show()
+![image](https://user-images.githubusercontent.com/103374522/210757444-9ed31c56-a9e2-4d65-afa2-c7f87b03956c.png)
+
+可以看到，三个数据集各自的文本分布情况十分均匀
