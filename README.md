@@ -67,5 +67,6 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     displayhead(train, valid, test, 5)
 返回结果如下，从上往下三个表分别对应训练集、开发集以及测试集：
 ![image](https://user-images.githubusercontent.com/103374522/210746375-c1cd403d-f5fb-4673-bae3-cdd60b0aa2e7.png)
+每个表格中只有三列，前两列为用来进行对比的句子，最后一列为标签。
 
 # 任务2：文本数据分析
