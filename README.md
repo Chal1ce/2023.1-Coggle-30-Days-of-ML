@@ -109,13 +109,14 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     label_value_counts(valid)
     label_value_counts(test)
 
-执行代码之后三个数据集的标签情况都如下图所示，数据集里面的样本数量是相同的，标签分布也十分均匀，对半分。
+执行代码之后三个数据集的标签情况都如下图所示，数据集里面的样本数量是相同的，标签分布也十分均匀，以五五开的形式呈对半分布。
 
 ![image](https://user-images.githubusercontent.com/103374522/210754427-61497e6d-510f-42f5-8e78-5d83df3577e2.png)
 
 ## 2.3 查看文本长度分布情况
 使用下面的代码，分析三个数据集的文本长度，并将其可视化：
-句子一的分布情况：
+
+文本一的分布情况：
 
     train_query1=train['query1'].str.len()
     valid_query1=valid['query1'].str.len()
@@ -130,4 +131,86 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     plt.show()
 ![image](https://user-images.githubusercontent.com/103374522/210757444-9ed31c56-a9e2-4d65-afa2-c7f87b03956c.png)
 
-可以看到，三个数据集各自的文本分布情况十分均匀
+文本二的分布情况：
+
+    train_query2=train['query2'].str.len()
+    valid_query2=valid['query2'].str.len()
+    test_query2=test['query2'].str.len()
+    fig,(ax1,ax2,ax3)=plt.subplots(1,3,figsize=(15,6))
+    sns.distplot(train_query2,ax=ax1,color='blue')
+    sns.distplot(valid_query2,ax=ax2,color='orange')
+    sns.distplot(test_query2,ax=ax3,color='green')
+    ax1.set_title('query2 in Train data')
+    ax2.set_title('query2 in Valid data')
+    ax3.set_title('query2 in Test data')
+    plt.show()
+![image](https://user-images.githubusercontent.com/103374522/210775812-55986e9a-f8cc-4a0b-a477-c6c3fe763b1d.png)
+
+
+可以看到，无论是文本一还是文本二，三个数据集各自的文本分布情况大致相同。
+
+而出现次数最多的文本长度则是落在了8～11之间，长文本的数量比较少。
+
+## 2.4 相似文本对与不相似文本对的比较
+
+文本一的标签为0与标签为1的文本长度分布如下图所示：
+
+只需稍微修改上方的绘图代码，即可将结果呈现出来：
+
+    train_query1_0=train['query1'][train['label']==0].str.len()
+    valid_query1_0=valid['query1'][valid['label']==0].str.len()
+    test_query1_0=test['query1'][test['label']==0].str.len()
+    train_query1_1=train['query1'][train['label']==1].str.len()
+    valid_query1_1=valid['query1'][valid['label']==1].str.len()
+    test_query1_1=test['query1'][test['label']==1].str.len()
+
+    fig,ax=plt.subplots(2,3,figsize=(15,12))
+    sns.distplot(train_query1_0,ax=ax[0][0],color='blue')
+    sns.distplot(valid_query1_0,ax=ax[0][1],color='orange')
+    sns.distplot(test_query1_0,ax=ax[0][2],color='green')
+    sns.distplot(train_query1_1,ax=ax[1][0],color='blue')
+    sns.distplot(valid_query1_1,ax=ax[1][1],color='orange')
+    sns.distplot(test_query1_1,ax=ax[1][2],color='green')
+
+    ax[0][0].set_title('query1 with label-0 in Train data')
+    ax[0][1].set_title('query1 with label-0 in Valid data')
+    ax[0][2].set_title('query1 with label-0 in Test data')
+    ax[1][0].set_title('query1 with label-1 in Train data')
+    ax[1][1].set_title('query1 with label-1 in Valid data')
+    ax[1][2].set_title('query1 with label-1 in Test data')
+    plt.show()
+    
+![image](https://user-images.githubusercontent.com/103374522/210777740-74342469-9a29-450f-b7c0-b7a7271bae1d.png)
+
+文本2的标签为0与标签为1的文本长度分布如下图所示：
+
+    train_query2_0=train['query2'][train['label']==0].str.len()
+    valid_query2_0=valid['query2'][valid['label']==0].str.len()
+    test_query2_0=test['query2'][test['label']==0].str.len()
+    train_query2_1=train['query2'][train['label']==1].str.len()
+    valid_query2_1=valid['query2'][valid['label']==1].str.len()
+    test_query2_1=test['query2'][test['label']==1].str.len()
+
+    fig,ax=plt.subplots(2,3,figsize=(15,12))
+    sns.distplot(train_query2_0,ax=ax[0][0],color='blue')
+    sns.distplot(valid_query2_0,ax=ax[0][1],color='orange')
+    sns.distplot(test_query2_0,ax=ax[0][2],color='green')
+    sns.distplot(train_query2_1,ax=ax[1][0],color='blue')
+    sns.distplot(valid_query2_1,ax=ax[1][1],color='orange')
+    sns.distplot(test_query2_1,ax=ax[1][2],color='green')
+
+    ax[0][0].set_title('query2 with label-0 in Train data')
+    ax[0][1].set_title('query2 with label-0 in Valid data')
+    ax[0][2].set_title('query2 with label-0 in Test data')
+    ax[1][0].set_title('query2 with label-1 in Train data')
+    ax[1][1].set_title('query2 with label-1 in Valid data')
+    ax[1][2].set_title('query2 with label-1 in Test data')
+    plt.show()
+
+![image](https://user-images.githubusercontent.com/103374522/210778175-d9757790-4d54-4aad-8771-f645035a4f1c.png)
+
+对于文本一，从数据发布上来看，相似文本对（标签为1）在短文本上的数量会比不相似文本对（标签为0）多，而在长度适中的文本上，相似文本对的文本平均长度要比不相似文本对的平均文本长度长。
+
+对于文本二，不相似文本对的文本长度分布明显比相似文本对的长度分布要均衡一些。
+
+## 2.5 
