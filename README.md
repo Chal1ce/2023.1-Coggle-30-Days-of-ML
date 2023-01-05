@@ -218,96 +218,29 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
 # 努力码中。。。。。
 
 ### 2.5.1 训练集结果
-    txt = open("train.csv", "r", encoding='utf-8').read()
-    words = jieba.lcut(txt)
-    counts = {}
-    for word in words:
-        if  len(word) == 1:
-            continue
-        else:
-            counts[word] = counts.get(word, 0) + 1
 
-    items = list(counts.items())
-    items.sort(key=lambda x: x[1], reverse=True)
-
-    for i in range(20):
-        word, count = items[i]
-        print("{0:<5}:{1:>5}".format(word, count))
-        
 输出训练集出现频率最高的20个词，如图所示：
  
-![image](https://user-images.githubusercontent.com/103374522/210796804-f3bd8921-e03e-4bd9-b04d-f97e388a40b9.png)
 
-统计输出训练集所有文本中共有83204个词：
+统计输出训练集所有文本中共有 个词：
 
-    sum_num = 0
-    for i in range(len(items)):
-        word, count = items[i]
-        sum_num += count
-    print("训练集的词数量共有{}个。".format(sum_num))
     
 输出：
 
-![image](https://user-images.githubusercontent.com/103374522/210797352-8cac1bef-c63b-49de-87b9-80a41c828fc6.png)
 
 再通过词云进行可视化查看：
 
-    wc = WordCloud(font_path='../input/fonts-on-mac/Fonts/方正正中黑简体.TTF',background_color="white")
-    wc.generate_from_frequencies(counts)
-
-    wc.to_file("Training data wordcloud.png")
-
-    plt.figure(figsize=(8,4))
-    plt.imshow(plt.imread("./Training data wordcloud.png"))
-    plt.axis("off")
-    plt.show()
-    
-![image](https://user-images.githubusercontent.com/103374522/210797579-bc2fa8a9-e479-43c5-9b06-893f3d264f2c.png)
 
 ### 2.5.2 开发集的结果
 
 出现频率最高的20个词：
 
-    txt = open("valid.csv", "r", encoding='utf-8').read()
-    words = jieba.lcut(txt)
-    counts = {}
-    for word in words:
-        if  len(word) == 1:
-            continue
-        else:
-            counts[word] = counts.get(word, 0) + 1
 
-    items = list(counts.items())
-    items.sort(key=lambda x: x[1], reverse=True)
+统计输出开发集所有文本中共有 个词：
 
-    for i in range(20):
-        word, count = items[i]
-        print("{0:<5}:{1:>5}".format(word, count))
-        
-![image](https://user-images.githubusercontent.com/103374522/210798782-229661a7-8dbb-40b9-9de5-7d540466f971.png)
-
-统计输出开发集所有文本中共有83204个词：
-
-    sum_num = 0
-    for i in range(len(items)):
-        word, count = items[i]
-        sum_num += count
-    print("开发集的词数量共有{}个。".format(sum_num))
-
-![image](https://user-images.githubusercontent.com/103374522/210798937-fbbf060e-5dc0-4931-b6a1-a38c6ae4aaa1.png)
 
 开发集的词云：
 
-    wc = WordCloud(font_path='../input/fonts-on-mac/Fonts/方正正中黑简体.TTF',background_color="white")
-    wc.generate_from_frequencies(counts)
 
-    wc.to_file("Valid data wordcloud.png")
-
-    plt.figure(figsize=(8,4))
-    plt.imshow(plt.imread("./Valid data wordcloud.png"))
-    plt.axis("off")
-    plt.show()
-
-![image](https://user-images.githubusercontent.com/103374522/210799079-5b2ca0d0-877e-49a2-8c5b-c0b458cf4793.png)
 
 ### 2.5.3 测试集结果
