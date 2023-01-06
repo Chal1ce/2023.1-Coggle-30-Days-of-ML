@@ -339,8 +339,24 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
 
 统计测试集的词数量：
 
+    sum_num = 0
+    for i in range(len(items)):
+        word, count = items[i]
+        sum_num += count
+    print("开发集的词数量共有{}个。".format(sum_num))
+
 ![image](https://user-images.githubusercontent.com/103374522/211008998-958a3528-f333-48f0-bede-99d57f06a086.png)
 
 测试集的词云如图：
+
+    wc = WordCloud(font_path='../input/fonts-on-mac/Fonts/方正正中黑简体.TTF',background_color="white")
+    wc.generate_from_frequencies(counts)
+
+    wc.to_file("Testing data wordcloud.png")
+
+    plt.figure(figsize=(8,4))
+    plt.imshow(plt.imread("./Testing data wordcloud.png"))
+    plt.axis("off")
+    plt.show()
 
 ![image](https://user-images.githubusercontent.com/103374522/211009329-7e9113e8-f8aa-41d3-91e1-b15973ebd0d8.png)
