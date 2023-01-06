@@ -235,28 +235,112 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
 
 ### 2.5.1 训练集结果
 
+    txt = open("train.csv", "r", encoding='utf-8').read()
+    words = jieba.lcut(txt)
+    counts = {}
+    for word in words:
+        if  len(word) == 1:
+            continue
+        else:
+            counts[word] = counts.get(word, 0) + 1
+
+    items = list(counts.items())
+    items.sort(key=lambda x: x[1], reverse=True)
+
+    for i in range(20):
+        word, count = items[i]
+        print("{0:<5}:{1:>5}".format(word, count))
+
 输出训练集出现频率最高的20个词，如图所示：
- 
 
-统计输出训练集所有文本中共有 个词：
+![image](https://user-images.githubusercontent.com/103374522/211007785-0a3d0abc-8691-4d77-9e8b-71591874d15c.png)
 
-    
-输出：
+统计输出训练集所有文本中共有1808847个词：
 
+    sum_num = 0
+    for i in range(len(items)):
+        word, count = items[i]
+        sum_num += count
+    print("训练集的词数量共有{}个。".format(sum_num))
+
+![image](https://user-images.githubusercontent.com/103374522/211008106-a7943fab-24d3-4071-90b5-40b9cee74c5b.png)
 
 再通过词云进行可视化查看：
 
+    wc = WordCloud(font_path='../input/fonts-on-mac/Fonts/方正正中黑简体.TTF',background_color="white")
+    wc.generate_from_frequencies(counts)
+
+    wc.to_file("Training data wordcloud.png")
+
+    plt.figure(figsize=(8,4))
+    plt.imshow(plt.imread("./Training data wordcloud.png"))
+    plt.axis("off")
+    plt.show()
+    
+![image](https://user-images.githubusercontent.com/103374522/211008368-44ee25df-f128-4598-b1a1-8f9d61fdd10a.png)
 
 ### 2.5.2 开发集的结果
 
 出现频率最高的20个词：
 
+    txt = open("valid.csv", "r", encoding='utf-8').read()
+    words = jieba.lcut(txt)
+    counts = {}
+    for word in words:
+        if  len(word) == 1:
+            continue
+        else:
+            counts[word] = counts.get(word, 0) + 1
 
-统计输出开发集所有文本中共有 个词：
+    items = list(counts.items())
+    items.sort(key=lambda x: x[1], reverse=True)
 
+    for i in range(20):
+        word, count = items[i]
+        print("{0:<5}:{1:>5}".format(word, count))
+
+![image](https://user-images.githubusercontent.com/103374522/211008499-a1139814-1244-4883-99b3-68f6a13af8b9.png)
+
+统计输出开发集所有文本中共有76293个词：
+
+    sum_num = 0
+    for i in range(len(items)):
+        word, count = items[i]
+        sum_num += count
+    print("开发集的词数量共有{}个。".format(sum_num))
+    
+![image](https://user-images.githubusercontent.com/103374522/211008624-92ae6d9d-35e3-4332-bec7-812eff611cda.png)
 
 开发集的词云：
 
-
+![image](https://user-images.githubusercontent.com/103374522/211008673-57cdf428-f05b-4887-b364-df69b1d10904.png)
 
 ### 2.5.3 测试集结果
+
+输出测试集出现次数最多的20个词：
+
+    txt = open("test.csv", "r", encoding='utf-8').read()
+    words = jieba.lcut(txt)
+    counts = {}
+    for word in words:
+        if  len(word) == 1:
+            continue
+        else:
+            counts[word] = counts.get(word, 0) + 1
+
+    items = list(counts.items())
+    items.sort(key=lambda x: x[1], reverse=True)
+
+    for i in range(20):
+        word, count = items[i]
+        print("{0:<5}:{1:>5}".format(word, count))
+        
+![image](https://user-images.githubusercontent.com/103374522/211008868-19d4771a-a3ab-4a97-ba1f-00a7733e8c6c.png)
+
+统计测试集的词数量：
+
+![image](https://user-images.githubusercontent.com/103374522/211008998-958a3528-f333-48f0-bede-99d57f06a086.png)
+
+测试集的词云如图：
+
+![image](https://user-images.githubusercontent.com/103374522/211009329-7e9113e8-f8aa-41d3-91e1-b15973ebd0d8.png)
