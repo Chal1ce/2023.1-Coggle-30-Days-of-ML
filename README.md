@@ -47,9 +47,9 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
 
 # 任务1：数据集读取
     def load_lcqmc():
-        train = pd.read_csv('https://mirror.coggle.club/dataset/LCQMC.test.data.zip', 
+        train = pd.read_csv('https://mirror.coggle.club/dataset/LCQMC.train.data.zip', 
                 sep='\t', names=['query1', 'query2', 'label'])
-        valid = pd.read_csv('https://mirror.coggle.club/dataset/LCQMC.test.data.zip', 
+        valid = pd.read_csv('https://mirror.coggle.club/dataset/LCQMC.valid.data.zip', 
                 sep='\t', names=['query1', 'query2', 'label'])
         test = pd.read_csv('https://mirror.coggle.club/dataset/LCQMC.test.data.zip', 
                 sep='\t', names=['query1', 'query2', 'label'])
@@ -66,7 +66,8 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
 
     displayhead(train, valid, test, 5)
 返回结果如下，从上往下三个表分别对应训练集、开发集以及测试集：
-![image](https://user-images.githubusercontent.com/103374522/210746375-c1cd403d-f5fb-4673-bae3-cdd60b0aa2e7.png)
+![image](https://user-images.githubusercontent.com/103374522/210924536-8b52b9c3-ab20-466f-9d68-84090e983fec.png)
+
 
 每个表格中只有三列，前两列为用来进行对比的句子，最后一列为标签。
 
@@ -109,9 +110,25 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     label_value_counts(valid)
     label_value_counts(test)
 
-执行代码之后三个数据集的标签情况都如下图所示，数据集里面的样本数量是相同的，标签分布也十分均匀，以五五开的形式呈对半分布。
+执行代码之后三个数据集的标签情况都如下图所示。
 
-![image](https://user-images.githubusercontent.com/103374522/210754427-61497e6d-510f-42f5-8e78-5d83df3577e2.png)
+训练集标签分布情况如下：
+
+![image](https://user-images.githubusercontent.com/103374522/210925095-cc74b79d-06ca-41b8-8b41-3c5909fdcda0.png)
+
+其中，相似文本对有138574对，不相似文本对有100192对，
+
+开发集标签分布情况如下：
+
+![image](https://user-images.githubusercontent.com/103374522/210925430-e1dfb251-ff39-41bc-a043-b126854cd66b.png)
+
+开发集中，相似文本对有4402对，不相似文本对有4400对，不同标签的文本对数量差异不大
+
+测试集标签分布情况如下：
+
+![image](https://user-images.githubusercontent.com/103374522/210925586-daa9546e-91f5-4da6-bc73-7f735cf74d5a.png)
+
+测试集的相似文本对和不相似文本对都是6250对，不同标签的文本对数量相同
 
 ## 2.3 查看文本长度分布情况
 使用下面的代码，分析三个数据集的文本长度，并将其可视化：
@@ -129,7 +146,7 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     ax2.set_title('query1 in Valid data')
     ax3.set_title('query1 in Test data')
     plt.show()
-![image](https://user-images.githubusercontent.com/103374522/210757444-9ed31c56-a9e2-4d65-afa2-c7f87b03956c.png)
+![image](https://user-images.githubusercontent.com/103374522/210925688-8ac44987-af79-4353-a2f1-6d66e9cd0614.png)
 
 文本二的分布情况：
 
@@ -144,12 +161,11 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     ax2.set_title('query2 in Valid data')
     ax3.set_title('query2 in Test data')
     plt.show()
-![image](https://user-images.githubusercontent.com/103374522/210775812-55986e9a-f8cc-4a0b-a477-c6c3fe763b1d.png)
+![image](https://user-images.githubusercontent.com/103374522/210925736-53f4b577-470d-4752-b4b3-60476c4fa725.png)
 
 
-可以看到，无论是文本一还是文本二，三个数据集各自的文本分布情况大致相同。
-
-而出现次数最多的文本长度则是落在了8～11之间，长文本的数量比较少。
+可以看到，无论是文本一还是文本二，训练集大多集中在中短文本上，并且训练集的长句的数量以及文本长度要比其他两个集合多。
+开发集的文本长度集中在10～15之间，测试集的文本长度则集中在了8～11之间，这两个数据集相比起训练集，长文本的数量都比较少。开发集的文本分布相比起测试集较为集中。
 
 ## 2.4 相似文本对与不相似文本对的比较
 
@@ -180,7 +196,7 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     ax[1][2].set_title('query1 with label-1 in Test data')
     plt.show()
     
-![image](https://user-images.githubusercontent.com/103374522/210777740-74342469-9a29-450f-b7c0-b7a7271bae1d.png)
+![image](https://user-images.githubusercontent.com/103374522/210926903-ddc3e863-6e9e-471d-a26e-d3e36cb9c75c.png)
 
 文本2的标签为0与标签为1的文本长度分布如下图所示：
 
@@ -207,7 +223,7 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     ax[1][2].set_title('query2 with label-1 in Test data')
     plt.show()
 
-![image](https://user-images.githubusercontent.com/103374522/210778175-d9757790-4d54-4aad-8771-f645035a4f1c.png)
+![image](https://user-images.githubusercontent.com/103374522/210926979-13889266-a5ea-4938-9338-ed1e9db86806.png)
 
 对于文本一，从数据发布上来看，相似文本对（标签为1）在短文本上的数量会比不相似文本对（标签为0）多，而在长度适中的文本上，相似文本对的文本平均长度要比不相似文本对的平均文本长度长。
 
