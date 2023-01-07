@@ -509,7 +509,7 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     from sklearn.metrics.pairwise import pairwise_distances
 
     def calc_cos_dist(query1, query2, metric='cosine'):
-        return pairwise_distances(query1, query2, metric=metric)
+        return pairwise_distances(query1, query2, metric=metric)[0][0]
 
     train_q1_tfidf = pd.read_pickle("train_query1_tfidf_v2.pkl")
     train_q2_tfidf = pd.read_pickle("train_query2_tfidf_v2.pkl")
@@ -534,5 +534,9 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     valid_tfidf_sim = np.array(valid_tfidf_sim)
     test_tfidf_sim = np.array(test_tfidf_sim)
     
+![image](https://user-images.githubusercontent.com/103374522/211155074-3ba5029b-52b4-44ab-9909-238c48a6b23c.png)
+
+从相似度标签来看，词组的差异以及共有的词的数量是最具有区分性的两个特征，通过词的差异，我们能看到，当标签为1，即为相似文本对时，文本1和文本2出现的不同的词很少，文本1和文本2在词组上没有很大的差异性，并且拥有着较多的共同词，反之文本1和文本2出现不同的词语多，共同的词语数量少。
+
 # 任务4:文本相似度（词向量与句子编码）
 
