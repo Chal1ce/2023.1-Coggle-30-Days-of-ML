@@ -534,9 +534,9 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     valid_tfidf_sim = np.array(valid_tfidf_sim)
     test_tfidf_sim = np.array(test_tfidf_sim)
     
-![image](https://user-images.githubusercontent.com/103374522/211155074-3ba5029b-52b4-44ab-9909-238c48a6b23c.png)
+![image](https://user-images.githubusercontent.com/103374522/211155182-4c27f8b9-d924-47ed-a58d-c14bff90a4b1.png)
 
 从相似度标签来看，词组的差异以及共有的词的数量是最具有区分性的两个特征，通过词的差异，我们能看到，当标签为1，即为相似文本对时，文本1和文本2出现的不同的词很少，文本1和文本2在词组上没有很大的差异性，并且拥有着较多的共同词，反之文本1和文本2出现不同的词语多，共同的词语数量少。
 
 # 任务4:文本相似度（词向量与句子编码）
-
+## 4.1 使用word2vec训练词向量
