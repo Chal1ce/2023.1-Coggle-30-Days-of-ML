@@ -231,8 +231,6 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
 
 ## 2.5 词频统计分析
 
-# 努力码中。。。。。
-
 ### 2.5.1 训练集结果
 
     txt = open("train.csv", "r", encoding='utf-8').read()
@@ -360,3 +358,118 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     plt.show()
 
 ![image](https://user-images.githubusercontent.com/103374522/211009329-7e9113e8-f8aa-41d3-91e1-b15973ebd0d8.png)
+
+## 2.6 字符分布
+    train_qs = pd.Series(train['query1'].tolist() + train['query2'].tolist()).astype(str)
+    valid_qs = pd.Series(valid['query1'].tolist() + valid['query2'].tolist()).astype(str)
+    test_qs = pd.Series(test['query1'].tolist() + test['query2'].tolist()).astype(str)
+
+    dist_train = train_qs.apply(len)
+    dist_valid = valid_qs.apply(len)
+    dist_test = test_qs.apply(len)
+
+    plt.figure(figsize=(15, 10))
+    plt.hist(dist_train, bins=50, range=[0, 50], label='Train')
+    plt.hist(dist_valid, bins=50, range=[0, 50], label='Valid')
+    plt.hist(dist_test, bins=50, range=[0, 50], label='Test')
+    plt.title("Characters count in the dataset")
+    plt.legend()
+    
+输出结果如下，蓝色为训练集，绿色为测试集，橙色为开发集：
+
+![image](https://user-images.githubusercontent.com/103374522/211142079-25d2d1f3-7457-4633-aa94-44c17ab36bd8.png)
+
+# 任务3：文本相似度（统计特征）
+## 3.1 计算文本长度
+    def question_len(data):
+        data['q1_length'] = data['query1'].apply(lambda x:len(x))
+        data['q2_length'] = data['query2'].apply(lambda x:len(x))
+
+    question_len(train)
+    question_len(valid)
+    question_len(test)
+
+通过运行上述代码，将数据集中的问题进行逐行分析，并且将结果保存在数据集中，输出结果如下，从上往下依次是：训练集、开发集、测试集：
+
+    display(train.head())
+    display(valid.head())
+    display(test.head())
+![image](https://user-images.githubusercontent.com/103374522/211142563-41feecd3-9dc1-4580-afa7-24ecddc7e16a.png)
+
+## 3.2 统计文本单词个数
+    def question_count(data):
+        data['q1_count'] = data['query1'].apply(lambda x:len(jieba.lcut(x)))
+        data['q2_count'] = data['query2'].apply(lambda x:len(jieba.lcut(x)))
+
+    question_count(train)
+    question_count(valid)
+    question_count(test)
+将文本用jieba库进行切割，并且使用len()函数计算文本的单词个数。
+
+    display(train.head())
+    display(valid.head())
+    display(test.head())
+
+最终输出结果如下：
+![image](https://user-images.githubusercontent.com/103374522/211142796-ffccce15-33dc-4f09-adbb-ae0c710942f9.png)
+
+## 3.3 文本单词差异
+    def question_compare(data):
+        data['q1_words'] = data['query1'].apply(lambda x:jieba.lcut(x))
+        data['q2_words'] = data['query2'].apply(lambda x:jieba.lcut(x))
+        data[['common_words', 'q1_new', 'q2_new']] = ' '
+        for i in range(len(data['query1'])):
+            ls1 = data['q1_words'][i]
+            ls2 = data['q2_words'][i]
+            common = set(ls1).intersection(set(ls2))
+            new_ls1 = ' '.join([w for w in ls1 if w not in common])
+            new_ls2 = ' '.join([w for w in ls2 if w not in common])
+            data['common_words'][i] = list(common)
+            data['q1_new'][i] = list(new_ls1)
+            data['q2_new'][i] = list(new_ls2)
+        data['common_words_len'] = data['common_words'].apply(lambda x:len(x))
+        data['q1_new_len'] = data['q1_new'].apply(lambda x:len(x))
+        data['q2_new_len'] = data['q2_new'].apply(lambda x:len(x))
+        display(data.head())
+         
+    question_compare(train)
+    question_compare(valid)
+    question_compare(test)
+
+对文本1和文本2用jieba库进行分词，统计相同的词以及不同的词，以及这些词的数量，并且将其存储在数据集中，将其输出如下图所示：
+
+![image](https://user-images.githubusercontent.com/103374522/211150965-85aa7d1c-6722-41a1-ad63-e08eea94521c.png)
+
+![image](https://user-images.githubusercontent.com/103374522/211150982-45e1c514-ca09-4cb5-a37c-ce74c5fdd82e.png)
+
+![image](https://user-images.githubusercontent.com/103374522/211151003-be971a51-dd93-4e53-8134-98259044d47f.png)
+
+## 3.5 最长公用字符串长度
+
+    def max_len(ls):
+        max_lens = 0
+        for i in ls:
+            max_lens = len(i) if len(i) > max_lens else max_lens
+
+        return max_lens
+
+    def max_common(data):
+        data['common_words_max'] = ''
+        for i in range(len(data['query1'])):
+            data['common_words_max'][i] = max_len(data['common_words'][i])
+        display(data.head())
+
+    max_common(train)
+    max_common(valid)
+    max_common(test)
+    
+在这里分别定义两个函数，第一个函数是接收传过来的共同的单词数列，然后计算出最长的公用字符串长度，第二个函数是用来便利每一个公共词数列，将其传入第一个函数中，并且将结果保存在数据集之中，函数运行结果如下，从上到下分别为训练集、开发集、测试集。
+
+![image](https://user-images.githubusercontent.com/103374522/211151903-ce023b33-432b-43de-b810-13a2e4103847.png)
+
+![image](https://user-images.githubusercontent.com/103374522/211151963-174fe5bf-8b96-4185-9100-becc33ce6a94.png)
+
+![image](https://user-images.githubusercontent.com/103374522/211151953-086e096f-69d5-4d4c-aec3-0bb76b7a18ae.png)
+
+## 3.6 TFIDF文本相似度
+
