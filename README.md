@@ -404,6 +404,7 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     question_count(train)
     question_count(valid)
     question_count(test)
+    
 将文本用jieba库进行切割，并且使用len()函数计算文本的单词个数。
 
     display(train.head())
@@ -411,6 +412,7 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
     display(test.head())
 
 最终输出结果如下：
+
 ![image](https://user-images.githubusercontent.com/103374522/211142796-ffccce15-33dc-4f09-adbb-ae0c710942f9.png)
 
 ## 3.3 文本单词差异
@@ -472,4 +474,65 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
 ![image](https://user-images.githubusercontent.com/103374522/211151953-086e096f-69d5-4d4c-aec3-0bb76b7a18ae.png)
 
 ## 3.6 TFIDF文本相似度
+
+在这里，使用TF-IDF构建稀疏特征，并使用pickle对生成的特征进行缓存，得到文本1和文本2的TF-IDF稀疏特征。
+
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    len_train = train.shape[0]
+
+    data_all = pd.concat([train, valid, test])
+
+    corpus=[]
+    max_features = 40
+    ngram_range = (1, 2)
+    min_df = 3
+    print("Generate tfidf")
+    feats = ['query1', 'query2']
+    vect_orig = TfidfVectorizer(max_features=max_features, ngram_range=ngram_range, min_df=min_df)
+
+    for f in feats:
+        data_all[f] = data_all[f].astype(str)
+        corpus += data_all[f].values.tolist()
+
+    vect_orig.fit(corpus)
+
+    for f in feats:
+        train_tfidf = vect_orig.transform(train[f].astype(str).values.tolist())
+        valid_tfidf = vect_orig.transform(valid[f].astype(str).values.tolist())
+        test_tfidf = vect_orig.transform(test[f].astype(str).values.tolist())
+        pd.to_pickle(train_tfidf, "train_%s_tfidf_v2.pkl"%f)
+        pd.to_pickle(valid_tfidf, "valid_%s_tfidf_v2.pkl"%f)
+        pd.to_pickle(test_tfidf, "test_%s_tfidf_v2.pkl"%f)
+        
+使用生成的TF-IDF文件进行相似度特征构建，在这里相似度类型选用余弦夹角。
+ 
+    from sklearn.metrics.pairwise import pairwise_distances
+
+    def calc_cos_dist(query1, query2, metric='cosine'):
+        return pairwise_distances(query1, query2, metric=metric)
+
+    train_q1_tfidf = pd.read_pickle("train_query1_tfidf_v2.pkl")
+    train_q2_tfidf = pd.read_pickle("train_query2_tfidf_v2.pkl")
+    valid_q1_tfidf = pd.read_pickle("valid_query1_tfidf_v2.pkl")
+    valid_q2_tfidf = pd.read_pickle("valid_query2_tfidf_v2.pkl")
+    test_q1_tfidf = pd.read_pickle("test_query1_tfidf_v2.pkl")
+    test_q2_tfidf = pd.read_pickle("test_query2_tfidf_v2.pkl")
+
+    train_tfidf_sim = []
+    for r1, r2 in zip(train_q1_tfidf, train_q2_tfidf):
+        train_tfidf_sim.append(calc_cos_dist(r1,r2))
+
+    valid_tfidf_sim = []
+    for r1, r2 in zip(valid_q1_tfidf, valid_q2_tfidf):
+        valid_tfidf_sim.append(calc_cos_dist(r1,r2))
+
+    test_tfidf_sim = []
+    for r1, r2 in zip(test_q1_tfidf, test_q2_tfidf):
+        test_tfidf_sim.append(calc_cos_dist(r1,r2))
+
+    train_tfidf_sim = np.array(train_tfidf_sim)
+    valid_tfidf_sim = np.array(valid_tfidf_sim)
+    test_tfidf_sim = np.array(test_tfidf_sim)
+    
+# 任务4:文本相似度（词向量与句子编码）
 
