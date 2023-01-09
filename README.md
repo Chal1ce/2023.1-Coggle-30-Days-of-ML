@@ -694,7 +694,62 @@ Keras自定义层，计算曼哈顿距离。
     print("Training time finished.\n%d epochs in %12.2f" % (n_epoch,
                                                             training_end_time - training_start_time))
 
+![image](https://user-images.githubusercontent.com/103374522/211257950-8a887406-7992-48fe-b7cf-0567cbacd5e2.png)
+
+
 保存训练完的模型
+
+![image](https://user-images.githubusercontent.com/103374522/211261549-8f1d404a-6031-47ee-9289-d8e3d3fa331f.png)
+
+训练20轮完毕，保存模型
 
     model.save('SiameseLSTM.h5')
     
+训练过程的准确率和loss
+
+    plt.subplot(211)
+    plt.plot(malstm_trained.history['accuracy'])
+    plt.plot(malstm_trained.history['val_accuracy'])
+    plt.title('Model Accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+
+    plt.subplot(212)
+    plt.plot(malstm_trained.history['loss'])
+    plt.plot(malstm_trained.history['val_loss'])
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper right')
+
+    plt.tight_layout(h_pad=1.0)
+    plt.savefig('history-graph.png')
+ 
+![image](https://user-images.githubusercontent.com/103374522/211264060-1e5ec074-cb3d-45f0-a295-dadabc8f5063.png)
+
+开始对测试集进行预测
+
+    test_df = test
+    for q in ['q1_words', 'q2_words']:
+        test_df[q + '_n'] = test_df[q]
+
+    embedding_dim = 300
+    max_seq_length = 40
+    test_df, embeddings = make_w2v_embeddings(test_df, embedding_dim=embedding_dim, empty_w2v=False)
+
+    X_test = split_and_zero_padding(test_df, max_seq_length)
+    y_true = test_df['label']
+
+    model.summary()
+    prediction = model.predict([X_test['left'], X_test['right']])
+    prediction = np.argmax(prediction, axis=1)
+
+    print('Accuracy:{}'.format(accuracy_score(y_true, prediction)))
+    
+![image](https://user-images.githubusercontent.com/103374522/211265878-a135615b-30e0-4bbe-8a11-54778e80ff4f.png)
+
+最终得出模型的预测准确率，只有0.5
+
+# 任务6:SBERT模型
+
