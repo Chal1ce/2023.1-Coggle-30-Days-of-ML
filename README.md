@@ -596,7 +596,7 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
         if empty_w2v:
             word2vec = EmptyWord2Vec
         else:
-            word2vec = gensim.models.word2vec.Word2Vec.load("Quora-Question-Pairs.w2v").wv
+            word2vec = gensim.models.word2vec.Word2Vec.load("Query1-Quesry2.w2v").wv
 
         for index, row in df.iterrows():
             # 遍历该行的两个文本
