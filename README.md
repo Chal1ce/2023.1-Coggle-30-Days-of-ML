@@ -741,15 +741,12 @@ Keras自定义层，计算曼哈顿距离。
     X_test = split_and_zero_padding(test_df, max_seq_length)
     y_true = test_df['label']
 
-    model.summary()
-    prediction = model.predict([X_test['left'], X_test['right']])
+    prediction = malstm_trained.predict([X_test['left'], X_test['right']])
     prediction = np.argmax(prediction, axis=1)
 
     print('Accuracy:{}'.format(accuracy_score(y_true, prediction)))
     
-![image](https://user-images.githubusercontent.com/103374522/211265878-a135615b-30e0-4bbe-8a11-54778e80ff4f.png)
 
-最终得出模型的预测准确率，只有0.5
 
 # 任务6:SBERT模型
 
