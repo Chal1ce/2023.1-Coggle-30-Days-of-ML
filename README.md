@@ -540,3 +540,161 @@ LCQMC数据集比释义语料库更通用，因为它侧重于意图匹配而不
 
 # 任务4:文本相似度（词向量与句子编码）
 ## 4.1 使用word2vec训练词向量
+在上述使用jieba库分词的基础上，训练一个w2v模型，并且通过w2v进行词嵌入
+
+由于前面已经使用了jieba库进行分词，已经生成了一个词汇列表，故在此可以不用再定义一个函数text_to_word_list(text)去进行数据处理
+    
+    def text_to_word_list(text)
+    
+定义一个函数来将其两个文本划分为字典。
+
+    def split_and_zero_padding(df, max_seq_length):
+        X = {'left': df['q1_words_n'], 'right': df['q2_words_n']}
+
+        # 另填充
+        for dataset, side in itertools.product([X], ['left', 'right']):
+            dataset[side] = pad_sequences(dataset[side], padding='pre', truncating='post', maxlen=max_seq_length)
+
+        return dataset
+
+训练一个w2v模型，并将其保存。
+
+    def extract_questions():
+
+        df1 = pd.read_csv("train.csv")
+        df2 = pd.read_csv("valid.csv")
+        df3 = pd.read_csv("test.csv")
+
+        for dataset in [df1, df2, df3]:
+            for i, row in dataset.iterrows():
+                if i != 0 and i % 1000 == 0:
+                    logging.info("read {0} sentences".format(i))
+
+                if row['query1']:
+                    yield gensim.utils.simple_preprocess(row['query1'])
+                if row['query2']:
+                    yield gensim.utils.simple_preprocess(row['query2'])
+
+
+    documents = list(extract_questions())
+    logging.info("Done reading data file")
+
+    model = gensim.models.Word2Vec(documents, size=300)
+    model.train(documents, total_examples=len(documents), epochs=10)
+    model.save("Query1-Quesry2.w2v")
+
+使用上述保存的模型进行词嵌入。
+
+    def make_w2v_embeddings(df, embedding_dim=300, empty_w2v=False):
+        vocabs = {}
+        vocabs_cnt = 0
+        vocabs_not_w2v = {}
+        vocabs_not_w2v_cnt = 0
+        # 停用词
+        stops = set(stopwords.words('chinese'))
+
+        if empty_w2v:
+            word2vec = EmptyWord2Vec
+        else:
+            word2vec = gensim.models.word2vec.Word2Vec.load("Quora-Question-Pairs.w2v").wv
+
+        for index, row in df.iterrows():
+            # 遍历该行的两个文本
+            for query in ['q1_words', 'q2_words']:
+                q2n = []
+                for word in text_to_word_list(row[query]):
+                    # 查看是否为停用词
+                    if word in stops:
+                        continue                   
+                    if word not in word2vec.vocab:
+                        if word not in vocabs_not_w2v:
+                            vocabs_not_w2v_cnt += 1
+                            vocabs_not_w2v[word] = 1
+
+                    # 如果这是之前没有见过的词，就把它附在词汇字典里。
+                    if word not in vocabs:
+                        vocabs_cnt += 1
+                        vocabs[word] = vocabs_cnt
+                        q2n.append(vocabs_cnt)
+                    else:
+                        q2n.append(vocabs[word])
+
+                # 将它存放在新的一列之中
+                df.at[index, query + '_n'] = q2n
+
+        # 嵌入矩阵
+        embeddings = 1 * np.random.randn(len(vocabs) + 1, embedding_dim)
+        embeddings[0] = 0 
+
+        # 构建嵌入矩阵
+        for word, index in vocabs.items():
+            if word in word2vec.vocab:
+                embeddings[index] = word2vec.word_vec(word)
+        del word2vec
+        return df, embeddings
+
+处理之后的训练集如图所示：
+
+![image](https://user-images.githubusercontent.com/103374522/211251650-7a1a1bc5-70c3-4e18-8feb-d2dd1b74d9bc.png)
+
+# 任务5：LSTM孪生网络
+
+Keras自定义层，计算曼哈顿距离。
+
+    class ManDist(Layer):
+        def __init__(self, **kwargs):
+            self.result = None
+            super(ManDist, self).__init__(**kwargs)
+
+        def build(self, input_shape):
+            super(ManDist, self).build(input_shape)
+
+        # 这是该层的逻辑所在。
+        def call(self, x, **kwargs):
+            self.result = K.exp(-K.sum(K.abs(x[0] - x[1]), axis=1, keepdims=True))
+            return self.result
+
+        # 返回output_shape
+        def compute_output_shape(self, input_shape):
+            return K.int_shape(self.result)
+
+
+定义一些模型的参数
+
+    gpus = 1
+    batch_size = 256
+    n_epoch = 20
+    n_hidden = 100
+    
+开始定义模型
+
+    x = Sequential()
+    x.add(Embedding(len(embeddings), embedding_dim,
+                    weights=[embeddings], input_shape=(max_seq_length,), trainable=False))
+    x.add(LSTM(n_hidden))
+    shared_model = x
+    
+输入层
+
+    left_input = Input(shape=(max_seq_length,), dtype='int32')
+    right_input = Input(shape=(max_seq_length,), dtype='int32')
+    
+将其全部打包成曼哈顿距离模型
+
+    malstm_distance = ManDist()([shared_model(left_input), shared_model(right_input)])
+    model = Model(inputs=[left_input, right_input], outputs=[malstm_distance])
+    
+准备开始训练模型
+
+    training_start_time = time()
+    malstm_trained = model.fit([X_train['left'], X_train['right']], Y_train,
+                               batch_size=batch_size, epochs=n_epoch,
+                               validation_data=([X_validation['left'], X_validation['right']], Y_validation))
+    training_end_time = time()
+    print("Training time finished.\n%d epochs in %12.2f" % (n_epoch,
+                                                            training_end_time - training_start_time))
+
+保存训练完的模型
+
+    model.save('SiameseLSTM.h5')
+    
