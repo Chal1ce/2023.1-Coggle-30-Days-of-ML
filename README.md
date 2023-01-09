@@ -740,12 +740,14 @@ Keras自定义层，计算曼哈顿距离。
 
     X_test = split_and_zero_padding(test_df, max_seq_length)
     y_true = test_df['label']
+    model = load_model('SiameseLSTM.h5', custom_objects={'ManDist': ManDist})
 
-    prediction = malstm_trained.predict([X_test['left'], X_test['right']])
+    prediction = model.predict([X_test['left'], X_test['right']])
     prediction = np.argmax(prediction, axis=1)
 
     print('Accuracy:{}'.format(accuracy_score(y_true, prediction)))
     
+<img width="212" alt="image" src="https://user-images.githubusercontent.com/103374522/211315337-dc249daa-3b9d-4356-b9e8-cf1613b5ebd8.png">
 
 
 # 任务6:SBERT模型
