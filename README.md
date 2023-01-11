@@ -752,3 +752,249 @@ Keras自定义层，计算曼哈顿距离。
 
 # 任务6:SBERT模型
 
+## 参数设置
+
+    class Params:
+        epoches = 5
+        batch_size = 32
+        max_length = 32
+        learning_rate = 2e-5
+        dropout = 0.1
+        warmup_steps = 100
+        display_interval = 500
+        pretrained_model = "hfl/chinese-bert-wwm"
+        pool_type = "mean"
+        train_file = "train.csv"
+        test_file = "test.csv"
+        
+## 其他函数
+使用AutoTokenizer加载预训练模型，并对传入的文本进行处理。
+
+    tokenizer = AutoTokenizer.from_pretrained(Params.pretrained_model)
+    class LoadDataset():
+        def __init__(self, data_file):
+            data_df = pd.read_csv(data_file)
+            self.data_df = data_df.fillna("")
+
+        def get_dataset(self):
+            question1_list = list(self.data_df['query1'])
+            question2_list = list(self.data_df['query2'])
+            label_list = list(self.data_df['label'])
+            return question1_list, question2_list, label_list
+
+        def get_encodings(self, tokenzier, questions):
+            question_encodings = tokenzier(questions,
+                                           truncation=True,
+                                           padding=True,
+                                           max_length=Params.max_length,
+                                           return_tensors='pt')
+            return question_encodings
+            
+重写三个函数，实现一个双样本数据集，能够获取两个样本，labels为标签。通过这个类的实例可以通过索引访问每一个样本。getitem能够获取两个文本的样本并将它们封装成一个字典，再将这个字典和它的标签组成一个元组返回。
+
+    class PairDataset(Dataset):
+        def __init__(self, q1_encodings, q2_encodings, labels):
+            self.q1_encodings = q1_encodings
+            self.q2_encodings = q2_encodings
+            self.labels = labels
+
+        def __getitem__(self, idx):
+            item1 = {key: torch.tensor(val[idx]) for key, val in self.q1_encodings.items()}
+            labels = torch.tensor(int(self.labels[idx]))
+            item2 = {key: torch.tensor(val[idx]) for key, val in self.q2_encodings.items()}
+            return item1, item2, labels
+
+
+        def __len__(self):
+            return len(self.labels)
+            
+## SBERT
+
+利用BERT模型预先训练的权重，并添加了池机制来获得输入句子的固定大小表示
+
+class SBERT(nn.Module):
+    def __init__(self, pretrained="hfl/chinese-bert-wwm-ext", pool_type="cls", dropout_prob=0.1):
+        super().__init__()
+        conf = BertConfig.from_pretrained(pretrained)
+        conf.attention_probs_dropout_prob = dropout_prob
+        conf.hidden_dropout_prob = dropout_prob
+        self.encoder = BertModel.from_pretrained(pretrained, config=conf)
+        assert pool_type in ["cls", "pooler", "mean"], "invalid pool_type: %s" % pool_type
+        self.pool_type = pool_type
+
+
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        if self.pool_type == "cls":
+            output = self.encoder(input_ids,
+                              attention_mask=attention_mask,
+                              token_type_ids=token_type_ids)
+            output = output.last_hidden_state[:, 0]
+        elif self.pool_type == "pooler":
+            output = self.encoder(input_ids,
+                              attention_mask=attention_mask,
+                              token_type_ids=token_type_ids)
+            output = output.pooler_output
+        elif self.pool_type == "mean":
+            output = self.get_mean_tensor(input_ids, attention_mask)
+        return output
+    
+    
+    def get_mean_tensor(self, input_ids, attention_mask):
+        encode_states = self.encoder(input_ids, attention_mask=attention_mask, output_hidden_states=True)
+        hidden_states = encode_states.hidden_states
+        last_avg_state = self.get_avg_tensor(hidden_states[-1], attention_mask)
+        first_avg_state = self.get_avg_tensor(hidden_states[1], attention_mask)
+        mean_avg_state = (last_avg_state + first_avg_state) / 2
+        return mean_avg_state
+    
+get_avg_tensor和get_avg_tensor2返回hidden state的平均表示。上方的get_mean_tensor方法将使用这些方法来平均最后和第一个隐藏状态。
+
+    def get_avg_tensor(self, layer_hidden_state, attention_mask):
+        layer_hidden_dim = layer_hidden_state.shape[-1]
+        attention_repeat_mask = attention_mask.unsqueeze(dim=-1).tile(layer_hidden_dim)
+        layer_attention_state = torch.mul(layer_hidden_state, attention_repeat_mask)
+        layer_sum_state = layer_attention_state.sum(dim=1)
+        attention_length_mask = attention_mask.sum(dim=-1)
+        attention_length_repeat_mask = attention_length_mask.unsqueeze(dim=-1).tile(layer_hidden_dim)        
+        layer_avg_state = torch.mul(layer_sum_state, 1/attention_length_repeat_mask)
+        return layer_avg_state
+    
+    
+    def get_avg_tensor2(self, layer_hidden_state, attention_mask):
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(layer_hidden_state.size()).float()
+        sum_embeddings = torch.sum(layer_hidden_state * input_mask_expanded, 1)
+        sum_mask = input_mask_expanded.sum(1)
+        sum_mask = torch.clamp(sum_mask, min=1e-9)
+        avg_embeddings = sum_embeddings / sum_mask
+        return avg_embeddings
+ 
+## 计算loss和准确度
+ 
+    def compute_loss(similarity, label, loss_fn):
+        # mse loss
+        loss = loss_fn(similarity, label)
+        return loss
+
+
+    def compute_acc(similarity, label):
+        pred = (similarity >= 0.5).long()
+        acc = accuracy_score(pred.detach().cpu().numpy(), label.cpu().numpy())
+        return acc
+        
+## 加载训练数据
+
+    train_loading = LoadDataset(Params.train_file)
+    train_question1, train_question2, train_labels = train_loading.get_dataset()
+    train_q1_encodings = train_loading.get_encodings(tokenizer, train_question1)
+    train_q2_encodings = train_loading.get_encodings(tokenizer, train_question2)
+    train_dataset = PairDataset(train_q1_encodings, train_q2_encodings, train_labels)
+    train_loader = DataLoader(train_dataset, 
+                              batch_size=Params.batch_size, 
+                              shuffle=True)
+
+## 加载模型、损失函数和优化器
+
+    model = SBERT(Params.pretrained_model, Params.pool_type, Params.dropout)
+    model.to(device)
+    loss_fn = nn.MSELoss()
+    optim = AdamW(model.parameters(), lr=Params.learning_rate)
+    total_steps = len(train_loader)
+    scheduler = get_linear_schedule_with_warmup(optim, 
+                                                num_warmup_steps = Params.warmup_steps, # Default value in run_glue.py
+                                                num_training_steps = total_steps)
+                                                
+## 训练模型
+
+    for epoch in range(Params.epoches):
+        model.train()
+        batch_num = 0
+        epoch_losses = []
+        epoch_acces = []
+        for q1, q2, label in tqdm(train_loader):
+
+            q1_input_ids = q1['input_ids'].to(device)
+            q1_attention_mask = q1['attention_mask'].to(device)
+            q1_token_type_ids = q1['token_type_ids'].to(device)
+
+            q2_input_ids = q2['input_ids'].to(device)
+            q2_attention_mask = q2['attention_mask'].to(device)
+            q2_token_type_ids = q2['token_type_ids'].to(device)
+
+            label = label.float().to(device)
+            # print(q1_input_ids, q2_input_ids, label)
+
+            optim.zero_grad()
+            q1_embedding = model(q1_input_ids, q1_attention_mask, q1_token_type_ids)
+            q2_embedding = model(q2_input_ids, q2_attention_mask, q2_token_type_ids)
+            similarity = torch.cosine_similarity(q1_embedding, q2_embedding, dim=1)
+            batch_loss = compute_loss(similarity, label, loss_fn)
+            # print("batch loss: {}, type: {}".format(batch_loss.item(), batch_loss.dtype))
+            batch_acc = compute_acc(similarity, label)
+
+            # 梯度更新+裁剪
+            batch_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+
+            # 参数更新
+            optim.step()
+            scheduler.step()
+
+            epoch_losses.append(batch_loss.item())
+            epoch_acces.append(batch_acc)
+
+            if batch_num % Params.display_interval == 0:
+                print("Epoch: {}, batch: {}/{}, loss: {}, acc: {}".format(epoch, batch_num, total_steps, batch_loss, batch_acc), flush=True)
+            batch_num += 1
+
+        epoch_avg_loss = np.mean(epoch_losses)
+        epoch_avg_acc = np.mean(epoch_acces)
+        print("Epoch: {}, avg loss: {}, acc: {}".format(epoch, epoch_avg_loss, epoch_avg_acc), flush=True)
+
+![image](https://user-images.githubusercontent.com/103374522/211728092-0077909c-b229-4b5d-b92f-c47188f2d606.png)
+
+![image](https://user-images.githubusercontent.com/103374522/211728542-d94d0267-49ec-4f5f-9c0c-a0aa79bd14d8.png)
+
+## 定义测试函数
+
+    def testing(model, test_loader):
+        model.eval()
+        test_loss, test_acc = [], []
+        for test_q1, test_q2, test_label in test_loader:
+            test_q1_input_ids = test_q1['input_ids'].to(device)
+            test_q1_attention_mask = test_q1['attention_mask'].to(device)
+            test_q1_token_type_ids = test_q1['token_type_ids'].to(device)
+
+            test_q2_input_ids = test_q2['input_ids'].to(device)
+            test_q2_attention_mask = test_q2['attention_mask'].to(device)
+            test_q2_token_type_ids = test_q2['token_type_ids'].to(device)
+
+            test_label = test_label.float().to(device)
+
+            test_q1_embedding = model(test_q1_input_ids, test_q1_attention_mask, test_q1_token_type_ids)
+            test_q2_embedding = model(test_q2_input_ids, test_q2_attention_mask, test_q2_token_type_ids)
+            test_similarity = torch.cosine_similarity(test_q1_embedding, test_q2_embedding, dim=1)
+            batch_test_loss = compute_loss(test_similarity, test_label, loss_fn)
+            batch_test_acc = compute_acc(test_similarity, test_label)
+
+            test_loss.append(batch_test_loss.item())
+            test_acc.append(batch_test_acc)
+
+        test_avg_loss = np.mean(test_loss)
+        test_avg_acc = np.mean(test_acc)
+        return test_avg_loss, test_avg_acc
+
+## 加载测试数据集并进行预测和保存模型
+
+    test_question1, test_question2, test_labels = test_loading.get_dataset()
+    test_q1_encodings = test_loading.get_encodings(tokenizer, test_question1)
+    test_q2_encodings = test_loading.get_encodings(tokenizer, test_question2)
+    test_dataset = PairDataset(test_q1_encodings, test_q2_encodings, test_labels)
+    test_loader = DataLoader(test_dataset, batch_size=Params.batch_size)
+                             
+    test_avg_loss, test_avg_acc = testing(model, test_loader)
+    print("Epoch: {}, train loss: {}, acc: {}, test loss: {}, acc: {}, save best model".format(epoch, epoch_avg_loss, epoch_avg_acc, test_avg_loss, test_avg_acc), flush=True)
+   
+![image](https://user-images.githubusercontent.com/103374522/211728420-1d8a0008-3352-4097-8d64-a5fca44d1d47.png)
+
+# 任务7:SimCSE模型
+
