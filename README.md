@@ -983,7 +983,7 @@ get_avg_tensor和get_avg_tensor2返回hidden state的平均表示。上方的get
         test_avg_acc = np.mean(test_acc)
         return test_avg_loss, test_avg_acc
 
-## 加载测试数据集并进行预测和保存模型
+## 加载测试数据集并进行预测
 
     test_question1, test_question2, test_labels = test_loading.get_dataset()
     test_q1_encodings = test_loading.get_encodings(tokenizer, test_question1)
