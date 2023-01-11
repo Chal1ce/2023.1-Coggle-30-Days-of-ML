@@ -812,61 +812,61 @@ Keras自定义层，计算曼哈顿距离。
 
 利用BERT模型预先训练的权重，并添加了池机制来获得输入句子的固定大小表示
 
-class SBERT(nn.Module):
-    def __init__(self, pretrained="hfl/chinese-bert-wwm-ext", pool_type="cls", dropout_prob=0.1):
-        super().__init__()
-        conf = BertConfig.from_pretrained(pretrained)
-        conf.attention_probs_dropout_prob = dropout_prob
-        conf.hidden_dropout_prob = dropout_prob
-        self.encoder = BertModel.from_pretrained(pretrained, config=conf)
-        assert pool_type in ["cls", "pooler", "mean"], "invalid pool_type: %s" % pool_type
-        self.pool_type = pool_type
+    class SBERT(nn.Module):
+        def __init__(self, pretrained="hfl/chinese-bert-wwm-ext", pool_type="cls", dropout_prob=0.1):
+            super().__init__()
+            conf = BertConfig.from_pretrained(pretrained)
+            conf.attention_probs_dropout_prob = dropout_prob
+            conf.hidden_dropout_prob = dropout_prob
+            self.encoder = BertModel.from_pretrained(pretrained, config=conf)
+            assert pool_type in ["cls", "pooler", "mean"], "invalid pool_type: %s" % pool_type
+            self.pool_type = pool_type
 
 
-    def forward(self, input_ids, attention_mask, token_type_ids):
-        if self.pool_type == "cls":
-            output = self.encoder(input_ids,
-                              attention_mask=attention_mask,
-                              token_type_ids=token_type_ids)
-            output = output.last_hidden_state[:, 0]
-        elif self.pool_type == "pooler":
-            output = self.encoder(input_ids,
-                              attention_mask=attention_mask,
-                              token_type_ids=token_type_ids)
-            output = output.pooler_output
-        elif self.pool_type == "mean":
-            output = self.get_mean_tensor(input_ids, attention_mask)
-        return output
+        def forward(self, input_ids, attention_mask, token_type_ids):
+            if self.pool_type == "cls":
+                output = self.encoder(input_ids,
+                                  attention_mask=attention_mask,
+                                  token_type_ids=token_type_ids)
+                output = output.last_hidden_state[:, 0]
+            elif self.pool_type == "pooler":
+                output = self.encoder(input_ids,
+                                  attention_mask=attention_mask,
+                                  token_type_ids=token_type_ids)
+                output = output.pooler_output
+            elif self.pool_type == "mean":
+                output = self.get_mean_tensor(input_ids, attention_mask)
+            return output
     
     
-    def get_mean_tensor(self, input_ids, attention_mask):
-        encode_states = self.encoder(input_ids, attention_mask=attention_mask, output_hidden_states=True)
-        hidden_states = encode_states.hidden_states
-        last_avg_state = self.get_avg_tensor(hidden_states[-1], attention_mask)
-        first_avg_state = self.get_avg_tensor(hidden_states[1], attention_mask)
-        mean_avg_state = (last_avg_state + first_avg_state) / 2
-        return mean_avg_state
-    
+        def get_mean_tensor(self, input_ids, attention_mask):
+            encode_states = self.encoder(input_ids, attention_mask=attention_mask, output_hidden_states=True)
+            hidden_states = encode_states.hidden_states
+            last_avg_state = self.get_avg_tensor(hidden_states[-1], attention_mask)
+            first_avg_state = self.get_avg_tensor(hidden_states[1], attention_mask)
+            mean_avg_state = (last_avg_state + first_avg_state) / 2
+            return mean_avg_state
+
 get_avg_tensor和get_avg_tensor2返回hidden state的平均表示。上方的get_mean_tensor方法将使用这些方法来平均最后和第一个隐藏状态。
 
-    def get_avg_tensor(self, layer_hidden_state, attention_mask):
-        layer_hidden_dim = layer_hidden_state.shape[-1]
-        attention_repeat_mask = attention_mask.unsqueeze(dim=-1).tile(layer_hidden_dim)
-        layer_attention_state = torch.mul(layer_hidden_state, attention_repeat_mask)
-        layer_sum_state = layer_attention_state.sum(dim=1)
-        attention_length_mask = attention_mask.sum(dim=-1)
-        attention_length_repeat_mask = attention_length_mask.unsqueeze(dim=-1).tile(layer_hidden_dim)        
-        layer_avg_state = torch.mul(layer_sum_state, 1/attention_length_repeat_mask)
-        return layer_avg_state
-    
-    
-    def get_avg_tensor2(self, layer_hidden_state, attention_mask):
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(layer_hidden_state.size()).float()
-        sum_embeddings = torch.sum(layer_hidden_state * input_mask_expanded, 1)
-        sum_mask = input_mask_expanded.sum(1)
-        sum_mask = torch.clamp(sum_mask, min=1e-9)
-        avg_embeddings = sum_embeddings / sum_mask
-        return avg_embeddings
+        def get_avg_tensor(self, layer_hidden_state, attention_mask):
+            layer_hidden_dim = layer_hidden_state.shape[-1]
+            attention_repeat_mask = attention_mask.unsqueeze(dim=-1).tile(layer_hidden_dim)
+            layer_attention_state = torch.mul(layer_hidden_state, attention_repeat_mask)
+            layer_sum_state = layer_attention_state.sum(dim=1)
+            attention_length_mask = attention_mask.sum(dim=-1)
+            attention_length_repeat_mask = attention_length_mask.unsqueeze(dim=-1).tile(layer_hidden_dim)        
+            layer_avg_state = torch.mul(layer_sum_state, 1/attention_length_repeat_mask)
+            return layer_avg_state
+
+
+        def get_avg_tensor2(self, layer_hidden_state, attention_mask):
+            input_mask_expanded = attention_mask.unsqueeze(-1).expand(layer_hidden_state.size()).float()
+            sum_embeddings = torch.sum(layer_hidden_state * input_mask_expanded, 1)
+            sum_mask = input_mask_expanded.sum(1)
+            sum_mask = torch.clamp(sum_mask, min=1e-9)
+            avg_embeddings = sum_embeddings / sum_mask
+            return avg_embeddings
  
 ## 计算loss和准确度
  
